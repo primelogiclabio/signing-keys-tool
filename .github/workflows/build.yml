@@ -1,6 +1,7 @@
 name: Build
 
-# Builds and tests signing-keys-tool on Windows and Linux. The jar and the launchers
+# Builds and tests signing-keys-tool on Windows and Linux. The jars (the versioned one
+# from target/ and the signing-keys-tool.jar the launchers use) and the launchers
 # (signing-keys-tool.cmd and signing-keys-tool.sh) are kept as a download on the run,
 # so the tool can be tried without building it.
 #
@@ -49,12 +50,13 @@ jobs:
         run: mvn -B -ntp package
 
       # The jar is the same on both systems, so one run keeps it.
-      - name: Keep the jar and the launchers
+      - name: Keep the jars and the launchers
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7
         with:
           name: signing-keys-tool-${{ github.sha }}
           path: |
+            target/signing-keys-tool-*.jar
             signing-keys-tool.jar
             signing-keys-tool.cmd
             signing-keys-tool.sh

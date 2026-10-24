@@ -2,7 +2,7 @@
 keys/
 *.pem
 
-# Build output
+# Build output: target/ has the versioned jar, signing-keys-tool.jar is the copy the launchers use
 target/
 signing-keys-tool.jar
 

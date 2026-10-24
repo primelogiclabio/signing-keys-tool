@@ -37,7 +37,8 @@ its owner, a read-back check, a fingerprint to compare copies, and expiry warnin
 mvn package
 ```
 
-This compiles the code, runs the tests and builds `signing-keys-tool.jar` in the project folder.
+This compiles the code, runs the tests and builds `target/signing-keys-tool-<version>.jar`. It also copies that jar to
+`signing-keys-tool.jar` in the project folder, where the launchers look for it.
 
 ## Use
 
