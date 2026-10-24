@@ -1,4 +1,4 @@
-package io.primelogiclab.tools.signingkeys;
+package io.primelogiclab.tools.signingkeystool;
 
 import java.util.Base64;
 

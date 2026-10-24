@@ -1,7 +1,7 @@
 name: Build
 
-# Builds and tests signing-keys on Windows and Linux. The jar and the launchers
-# (signing-keys.cmd and signing-keys.sh) are kept as a download on the run,
+# Builds and tests signing-keys-tool on Windows and Linux. The jar and the launchers
+# (signing-keys-tool.cmd and signing-keys-tool.sh) are kept as a download on the run,
 # so the tool can be tried without building it.
 #
 # It runs only when something that goes into the build changes: the source, the
@@ -15,16 +15,16 @@ on:
     paths:
       - 'src/**'
       - 'pom.xml'
-      - 'signing-keys.cmd'
-      - 'signing-keys.sh'
+      - 'signing-keys-tool.cmd'
+      - 'signing-keys-tool.sh'
       - '.gitattributes'
       - '.github/workflows/build.yml'
   pull_request:
     paths:
       - 'src/**'
       - 'pom.xml'
-      - 'signing-keys.cmd'
-      - 'signing-keys.sh'
+      - 'signing-keys-tool.cmd'
+      - 'signing-keys-tool.sh'
       - '.gitattributes'
       - '.github/workflows/build.yml'
   workflow_dispatch:
@@ -53,11 +53,11 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v7
         with:
-          name: signing-keys-${{ github.sha }}
+          name: signing-keys-tool-${{ github.sha }}
           path: |
-            signing-keys.jar
-            signing-keys.cmd
-            signing-keys.sh
+            signing-keys-tool.jar
+            signing-keys-tool.cmd
+            signing-keys-tool.sh
           if-no-files-found: error
           retention-days: 30
 

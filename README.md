@@ -1,4 +1,4 @@
-# Signing Keys
+# Signing Keys Tool
 
 A small command line tool that creates and checks **RSA key pairs for digital signatures**, one pair per environment
 or per client. Use the pairs wherever one app signs and others verify with SHA256withRSA: JWTs (where it is called
@@ -37,7 +37,7 @@ its owner, a read-back check, a fingerprint to compare copies, and expiry warnin
 mvn package
 ```
 
-This compiles the code, runs the tests and builds `signing-keys.jar` in the project folder.
+This compiles the code, runs the tests and builds `signing-keys-tool.jar` in the project folder.
 
 ## Use
 
@@ -45,31 +45,31 @@ Run it any one of three ways. They do the same thing.
 
 | Where | Command |
 |---|---|
-| Any system, plain Java | `java -jar signing-keys.jar <command> ...` |
-| Windows launcher | `signing-keys.cmd <command> ...` |
-| Linux and macOS launcher | `./signing-keys.sh <command> ...` |
+| Any system, plain Java | `java -jar signing-keys-tool.jar <command> ...` |
+| Windows launcher | `signing-keys-tool.cmd <command> ...` |
+| Linux and macOS launcher | `./signing-keys-tool.sh <command> ...` |
 
 The launchers find the jar next to the script, so you can run them from any folder. If the `.sh` file is not
-executable, run `chmod +x signing-keys.sh` once.
+executable, run `chmod +x signing-keys-tool.sh` once.
 
 For example:
 
 ```
-java -jar signing-keys.jar generate --env prod                           writes <tmp>/signing-keys/prod/signing-private.pem and signing-public.pem
-java -jar signing-keys.jar generate --env prod --out keys                writes keys/prod/signing-private.pem and signing-public.pem
-java -jar signing-keys.jar generate --env prod --client acme --out keys  writes them in keys/prod/acme
-java -jar signing-keys.jar generate --env qa --days 365 --out keys       a pair that is valid for one year
-java -jar signing-keys.jar check keys/prod/acme                          reads them back and checks them
+java -jar signing-keys-tool.jar generate --env prod                           writes <tmp>/signing-keys/prod/signing-private.pem and signing-public.pem
+java -jar signing-keys-tool.jar generate --env prod --out keys                writes keys/prod/signing-private.pem and signing-public.pem
+java -jar signing-keys-tool.jar generate --env prod --client acme --out keys  writes them in keys/prod/acme
+java -jar signing-keys-tool.jar generate --env qa --days 365 --out keys       a pair that is valid for one year
+java -jar signing-keys-tool.jar check keys/prod/acme                          reads them back and checks them
 ```
 
-Use `keys\prod` on Windows. The commands below are written as `signing-keys <command>`. Read that as any one
+Use `keys\prod` on Windows. The commands below are written as `signing-keys-tool <command>`. Read that as any one
 of the three ways.
 
 ### generate
 
 ```
-signing-keys generate --env <environment> [--client <client>] [--out <folder>]
-                      [--name <file prefix>] [--bits 2048|3072|4096] [--days <days>] [--force]
+signing-keys-tool generate --env <environment> [--client <client>] [--out <folder>]
+                           [--name <file prefix>] [--bits 2048|3072|4096] [--days <days>] [--force]
 ```
 
 | Option | Meaning | Default |
@@ -94,8 +94,8 @@ start with a letter or digit, and can be 64 characters long. Anything else, such
 ### check
 
 ```
-signing-keys check <folder> [--name <file prefix>]
-signing-keys check --env <environment> [--client <client>] [--out <folder>] [--name <file prefix>]
+signing-keys-tool check <folder> [--name <file prefix>]
+signing-keys-tool check --env <environment> [--client <client>] [--out <folder>] [--name <file prefix>]
 ```
 
 - **Both files present:** it signs a test string with the private key and checks the signature with the public key.

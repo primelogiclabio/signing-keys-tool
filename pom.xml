@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Builds signing-keys.jar in this folder: mvn package -->
+<!-- Builds signing-keys-tool.jar in this folder: mvn package -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.primelogiclab.tools</groupId>
-    <artifactId>signing-keys</artifactId>
+    <artifactId>signing-keys-tool</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
-    <name>Signing Keys</name>
+    <name>Signing Keys Tool</name>
     <description>Creates and checks RSA key pairs (PEM files) for digital signatures with SHA256withRSA (RS256 in JWTs), one pair per environment or client.</description>
 
     <licenses>
@@ -38,7 +38,7 @@
     </dependencies>
 
     <build>
-        <finalName>signing-keys</finalName>
+        <finalName>signing-keys-tool</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -49,7 +49,7 @@
                     <outputDirectory>${project.basedir}</outputDirectory>
                     <archive>
                         <manifest>
-                            <mainClass>io.primelogiclab.tools.signingkeys.SigningKeysTool</mainClass>
+                            <mainClass>io.primelogiclab.tools.signingkeystool.SigningKeysTool</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

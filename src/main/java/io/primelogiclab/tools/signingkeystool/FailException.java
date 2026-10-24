@@ -1,4 +1,4 @@
-package io.primelogiclab.tools.signingkeys;
+package io.primelogiclab.tools.signingkeystool;
 
 /**
  * The command line is right but the work failed: a file already exists, a key does not load, the two keys are not
