@@ -1,10 +1,10 @@
-# Signing Keys
+# Signing Keys Tool
 
 A small Java command-line tool that creates and checks RSA key pairs for digital signatures, one pair per environment
 or per client. It needs nothing but a JDK: no OpenSSL, no libraries.
 
-- Package: `io.primelogiclab.tools.signingkeys`
-- Maven: `io.primelogiclab.tools:signing-keys:1.0`
+- Package: `io.primelogiclab.tools.signingkeystool`
+- Maven: `io.primelogiclab.tools:signing-keys-tool:1.0`
 - License: MIT
 - Written: 2026-10-11
 
@@ -67,7 +67,7 @@ commands for a PKCS#8 private key, a matching public key and a certificate are e
 ([OpenSSL docs](#java-and-tools)). This tool uses keytool for the one step plain Java can't do, which is signing the
 certificate. It writes the PEM files itself and adds the checks around them.
 
-| Need | keytool alone | OpenSSL alone | signing-keys |
+| Need | keytool alone | OpenSSL alone | signing-keys-tool |
 |---|---|---|---|
 | Private key as a PEM file (PKCS#8) | No: stays in the keystore | Yes | Yes |
 | Already installed with Java | Yes | No: separate install on Windows | Yes: needs a JDK |
@@ -82,7 +82,7 @@ You need a **JDK, version 8 or later**, that includes `keytool` (a standard JDK 
 need **Apache Maven** to build. The tool runs on Windows and Linux, and the same jar works on both.
 
 ```
-# build: compiles, runs the tests, and writes signing-keys.jar into the project folder
+# build: compiles, runs the tests, and writes signing-keys-tool.jar into the project folder
 mvn package
 ```
 
@@ -90,25 +90,25 @@ Then run it in any one of three ways. They behave the same, and the launchers pa
 
 | Where | Command |
 |---|---|
-| Any system, plain Java | `java -jar signing-keys.jar <command> ...` |
-| Windows launcher | `signing-keys.cmd <command> ...` |
-| Linux / macOS launcher | `./signing-keys.sh <command> ...` |
+| Any system, plain Java | `java -jar signing-keys-tool.jar <command> ...` |
+| Windows launcher | `signing-keys-tool.cmd <command> ...` |
+| Linux / macOS launcher | `./signing-keys-tool.sh <command> ...` |
 
 The launchers find the jar next to the script, even through a symbolic link, so you can run them from any folder.
-If the `.sh` file isn't executable, run `chmod +x signing-keys.sh` once.
+If the `.sh` file isn't executable, run `chmod +x signing-keys-tool.sh` once.
 
 ```
 # a pair for production, written under ./keys/prod
-java -jar signing-keys.jar generate --env prod --out keys
+java -jar signing-keys-tool.jar generate --env prod --out keys
 
 # a separate pair for one client, under ./keys/prod/acme
-java -jar signing-keys.jar generate --env prod --client acme --out keys
+java -jar signing-keys-tool.jar generate --env prod --client acme --out keys
 
 # a QA pair that is valid for one year
-java -jar signing-keys.jar generate --env qa --days 365 --out keys
+java -jar signing-keys-tool.jar generate --env qa --days 365 --out keys
 
 # read a pair back and check it (use keys\prod\acme on Windows)
-java -jar signing-keys.jar check keys/prod/acme
+java -jar signing-keys-tool.jar check keys/prod/acme
 ```
 
 > **Always pass `--out` for real keys.** Without `--out`, files go to `signing-keys` inside the Java temp folder
@@ -217,8 +217,8 @@ All three are PEM files: base64 text between BEGIN and END lines, wrapped at 64 
 ([RFC 7468](#standards-and-guidance)).
 
 ```
-signing-keys  --->  The app that signs (exactly one):   private + public + cert
-              --->  Every app that verifies:            public + cert
+signing-keys-tool  --->  The app that signs (exactly one):   private + public + cert
+                   --->  Every app that verifies:            public + cert
 ```
 
 ### The fingerprint
@@ -241,13 +241,13 @@ openssl rsa -pubin -in signing-public.pem -outform DER | openssl dgst -sha256
 
 ## 5. Command reference
 
-Below, `signing-keys` means whichever of the three ways you run it.
+Below, `signing-keys-tool` means whichever of the three ways you run it.
 
 ### generate
 
 ```
-signing-keys generate --env <environment> [--client <client>] [--out <folder>]
-                      [--name <file prefix>] [--bits 2048|3072|4096] [--days <days>] [--force]
+signing-keys-tool generate --env <environment> [--client <client>] [--out <folder>]
+                           [--name <file prefix>] [--bits 2048|3072|4096] [--days <days>] [--force]
 ```
 
 | Option | Meaning | Default |
@@ -263,8 +263,8 @@ signing-keys generate --env <environment> [--client <client>] [--out <folder>]
 ### check
 
 ```
-signing-keys check <folder> [--name <file prefix>]
-signing-keys check --env <environment> [--client <client>] [--out <folder>] [--name <file prefix>]
+signing-keys-tool check <folder> [--name <file prefix>]
+signing-keys-tool check --env <environment> [--client <client>] [--out <folder>] [--name <file prefix>]
 ```
 
 Give either a folder or `--env`, which finds the folder the same way `generate` would. If you use `--env` without
@@ -301,7 +301,7 @@ is new.
 Production needs its own pair for the client `acme`:
 
 ```
-> java -jar signing-keys.jar generate --env prod --client acme --out keys
+> java -jar signing-keys-tool.jar generate --env prod --client acme --out keys
 Created the signing key pair for prod / acme
   private key  C:\work\keys\prod\acme\signing-private.pem
   public key   C:\work\keys\prod\acme\signing-public.pem
@@ -324,7 +324,7 @@ every app that verifies. Write down the fingerprint.
 A server that only verifies signatures holds the public key and the certificate. Run `check` there:
 
 ```
-> java -jar signing-keys.jar check C:\apps\verifier\keys
+> java -jar signing-keys-tool.jar check C:\apps\verifier\keys
 Checked C:\apps\verifier\keys
   public key   RSA 2048 bits (SHA256withRSA / RS256)
   fingerprint  SHA-256 of the public key: 1aac9141ce06d3a01d8e64354337a8833c7e16c36af16b7d996c8f8cbba751b5
@@ -375,10 +375,10 @@ error: Cannot read …\signing-private.pem as a PKCS#8 private key (it must star
 ### F. A typo or an unsafe name
 
 ```
-> java -jar signing-keys.jar generate --env ../x
+> java -jar signing-keys-tool.jar generate --env ../x
 error: --env '../x' is not allowed. Use letters, digits, '.', '_' and '-' only, start with a letter or digit, and keep it to 64 characters.
 
-signing-keys: creates and checks RSA key pairs for digital signatures (SHA256withRSA, the RS256 of JWTs).
+signing-keys-tool: creates and checks RSA key pairs for digital signatures (SHA256withRSA, the RS256 of JWTs).
 … usage text …
 ```
 
@@ -437,10 +437,10 @@ production.
 
 | Item | Value |
 |---|---|
-| Maven coordinates | `io.primelogiclab.tools:signing-keys:1.0` (jar) |
-| Java package | `io.primelogiclab.tools.signingkeys` |
-| Main class | `io.primelogiclab.tools.signingkeys.SigningKeysTool` |
-| Build output | `signing-keys.jar` in the project folder, not `target/`. It's git-ignored. |
+| Maven coordinates | `io.primelogiclab.tools:signing-keys-tool:1.0` (jar) |
+| Java package | `io.primelogiclab.tools.signingkeystool` |
+| Main class | `io.primelogiclab.tools.signingkeystool.SigningKeysTool` |
+| Build output | `signing-keys-tool.jar` in the project folder, not `target/`. It's git-ignored. |
 | Target bytecode | Java 8 (`maven.compiler.source/target 1.8`), so the jar also runs on servers that are still on Java 8 |
 | Test framework | JUnit 4.13.1, test scope only ([JUnit 4](#to-build-and-run-it)) |
 | License | MIT, in `LICENSE` |
@@ -455,7 +455,7 @@ protection, file permissions, fingerprints, PKCS#1 detection, the expiry rules a
 > **Last verified build: 2026-10-11.** JDK 21.0.2 and Maven 3.9.16 on Windows. `mvn clean package` ran 39 tests:
 > 0 failures, 0 errors, 1 skipped. The skipped test checks file permissions that only apply on another type of file
 > system, so it doesn't run on Windows. The jar's manifest names
-> `io.primelogiclab.tools.signingkeys.SigningKeysTool` as its main class.
+> `io.primelogiclab.tools.signingkeystool.SigningKeysTool` as its main class.
 
 ### Continuous integration
 
@@ -464,7 +464,7 @@ protection, file permissions, fingerprints, PKCS#1 detection, the expiry rules a
 - A matrix of `windows-latest` and `ubuntu-latest`, set up with Eclipse Temurin Java 8 through `actions/setup-java`
   ([setup-java, Temurin](#to-build-and-run-it)), with the Maven cache on.
 - `mvn -B -ntp package` builds and tests.
-- The Ubuntu job uploads `signing-keys.jar` and both launchers as a download kept for 30 days, so the tool can be
+- The Ubuntu job uploads `signing-keys-tool.jar` and both launchers as a download kept for 30 days, so the tool can be
   tried without building it.
 - When a test fails, the job uploads `target/surefire-reports`.
 
@@ -541,12 +541,12 @@ protection, file permissions, fingerprints, PKCS#1 detection, the expiry rules a
 - [LICENSE](../LICENSE): the MIT license.
 - [pom.xml](../pom.xml): coordinates, Java 8 target, main class, JUnit version.
 - [.github/workflows/build.yml](../.github/workflows/build.yml): the CI workflow.
-- [src/main/java/io/primelogiclab/tools/signingkeys/](../src/main/java/io/primelogiclab/tools/signingkeys/):
+- [src/main/java/io/primelogiclab/tools/signingkeystool/](../src/main/java/io/primelogiclab/tools/signingkeystool/):
   SigningKeysTool, KeyFiles, Keytool, Pem and the two exceptions.
-- [SigningKeysToolTest.java](../src/test/java/io/primelogiclab/tools/signingkeys/SigningKeysToolTest.java): the 39
+- [SigningKeysToolTest.java](../src/test/java/io/primelogiclab/tools/signingkeystool/SigningKeysToolTest.java): the 39
   tests.
 
 ---
 
-*Signing Keys: project documentation, written 2026-10-11 from the source at version 1.0. An HTML copy of this page
-is `signing-keys.html` in the same folder.*
+*Signing Keys Tool: project documentation, written 2026-10-11 from the source at version 1.0. An HTML copy of this page
+is `signing-keys-tool.html` in the same folder.*

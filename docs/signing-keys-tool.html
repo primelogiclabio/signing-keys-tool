@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Signing Keys</title>
-<meta name="description" content="How signing-keys creates and checks RSA key pairs for digital signatures, one pair per environment or client.">
+<title>Signing Keys Tool</title>
+<meta name="description" content="How signing-keys-tool creates and checks RSA key pairs for digital signatures, one pair per environment or client.">
 <script>
   // Apply the saved theme before the page paints, so there is no flash of the wrong theme.
   (function () {
@@ -332,11 +332,11 @@
 <header class="hero">
   <div class="wrap">
     <p class="eyebrow">Project documentation</p>
-    <h1>Signing Keys</h1>
+    <h1>Signing Keys Tool</h1>
     <p class="lede">A small Java command-line tool that creates and checks RSA key pairs for digital signatures, one pair per environment or per client. It needs nothing but a JDK: no OpenSSL, no libraries.</p>
     <ul class="chips">
-      <li>Package <b>io.primelogiclab.tools.signingkeys</b></li>
-      <li>Maven <b>io.primelogiclab.tools:signing-keys:1.0</b></li>
+      <li>Package <b>io.primelogiclab.tools.signingkeystool</b></li>
+      <li>Maven <b>io.primelogiclab.tools:signing-keys-tool:1.0</b></li>
       <li>License <b>MIT</b></li>
       <li>Written <b>2026-10-11</b></li>
     </ul>
@@ -373,7 +373,7 @@
   <h3>Why not just use keytool or OpenSSL?</h3>
   <p>Both can make an RSA pair, but neither gets you all the way to files you can hand out safely. <code>keytool</code> comes with every JDK, but it keeps keys inside a keystore and has no command that exports the private key as a PEM file (<a href="#ref-keytool8">keytool docs</a>). OpenSSL can write the files, but it's a separate install on Windows, and the commands for a PKCS#8 private key, a matching public key and a certificate are easy to get wrong (<a href="#ref-openssl">OpenSSL docs</a>). This tool uses keytool for the one step plain Java can't do, which is signing the certificate. It writes the PEM files itself and adds the checks around them.</p>
   <div class="table-wrap"><table>
-    <thead><tr><th>Need</th><th>keytool alone</th><th>OpenSSL alone</th><th>signing-keys</th></tr></thead>
+    <thead><tr><th>Need</th><th>keytool alone</th><th>OpenSSL alone</th><th>signing-keys-tool</th></tr></thead>
     <tbody>
       <tr><td>Private key as a PEM file (PKCS#8)</td><td><span class="pill bad">No</span> stays in the keystore</td><td><span class="pill ok">Yes</span></td><td><span class="pill ok">Yes</span></td></tr>
       <tr><td>Already installed with Java</td><td><span class="pill ok">Yes</span></td><td><span class="pill bad">No</span> separate install on Windows</td><td><span class="pill ok">Yes</span> needs a JDK</td></tr>
@@ -389,29 +389,29 @@
 <section id="quickstart">
   <h2><span class="num">2</span>Quick start</h2>
   <p>You need a <b>JDK, version 8 or later</b>, that includes <code>keytool</code> (a standard JDK has it next to <code>java</code>). You also need <b>Apache Maven</b> to build. The tool runs on Windows and Linux, and the same jar works on both.</p>
-  <pre><code><span class="c"># build: compiles, runs the tests, and writes signing-keys.jar into the project folder</span>
+  <pre><code><span class="c"># build: compiles, runs the tests, and writes signing-keys-tool.jar into the project folder</span>
 mvn package</code></pre>
   <p>Then run it in any one of three ways. They behave the same, and the launchers pass the exit code through.</p>
   <div class="table-wrap"><table>
     <thead><tr><th>Where</th><th>Command</th></tr></thead>
     <tbody>
-      <tr><td>Any system, plain Java</td><td><code>java -jar signing-keys.jar &lt;command&gt; ...</code></td></tr>
-      <tr><td>Windows launcher</td><td><code>signing-keys.cmd &lt;command&gt; ...</code></td></tr>
-      <tr><td>Linux / macOS launcher</td><td><code>./signing-keys.sh &lt;command&gt; ...</code></td></tr>
+      <tr><td>Any system, plain Java</td><td><code>java -jar signing-keys-tool.jar &lt;command&gt; ...</code></td></tr>
+      <tr><td>Windows launcher</td><td><code>signing-keys-tool.cmd &lt;command&gt; ...</code></td></tr>
+      <tr><td>Linux / macOS launcher</td><td><code>./signing-keys-tool.sh &lt;command&gt; ...</code></td></tr>
     </tbody>
   </table></div>
-  <p>The launchers find the jar next to the script, even through a symbolic link, so you can run them from any folder. If the <code>.sh</code> file isn't executable, run <code>chmod +x signing-keys.sh</code> once.</p>
+  <p>The launchers find the jar next to the script, even through a symbolic link, so you can run them from any folder. If the <code>.sh</code> file isn't executable, run <code>chmod +x signing-keys-tool.sh</code> once.</p>
   <pre><code><span class="c"># a pair for production, written under ./keys/prod</span>
-java -jar signing-keys.jar generate --env prod --out keys
+java -jar signing-keys-tool.jar generate --env prod --out keys
 
 <span class="c"># a separate pair for one client, under ./keys/prod/acme</span>
-java -jar signing-keys.jar generate --env prod --client acme --out keys
+java -jar signing-keys-tool.jar generate --env prod --client acme --out keys
 
 <span class="c"># a QA pair that is valid for one year</span>
-java -jar signing-keys.jar generate --env qa --days 365 --out keys
+java -jar signing-keys-tool.jar generate --env qa --days 365 --out keys
 
 <span class="c"># read a pair back and check it (use keys\prod\acme on Windows)</span>
-java -jar signing-keys.jar check keys/prod/acme</code></pre>
+java -jar signing-keys-tool.jar check keys/prod/acme</code></pre>
   <div class="callout warn"><span class="t">Always pass <code>--out</code> for real keys</span>
     <p>Without <code>--out</code>, files go to <code>signing-keys</code> inside the Java temp folder (<code>java.io.tmpdir</code>), for example <code>C:\Users\&lt;you&gt;\AppData\Local\Temp</code> or <code>/tmp</code>. That suits a test run. A temp folder is no place to keep a private key.</p>
   </div>
@@ -500,7 +500,7 @@ java -jar signing-keys.jar check keys/prod/acme</code></pre>
   <p>All three are PEM files: base64 text between BEGIN and END lines, wrapped at 64 characters (<a href="#ref-rfc7468">RFC 7468</a>).</p>
 
   <div class="holders" aria-label="Which app holds which file">
-    <div class="box tool"><h4>signing-keys</h4><p>Writes all three files into one folder for the environment (and client).</p>
+    <div class="box tool"><h4>signing-keys-tool</h4><p>Writes all three files into one folder for the environment (and client).</p>
       <div class="files"><span class="file priv">private</span><span class="file pub">public</span><span class="file cert">cert</span></div>
     </div>
     <div class="arrow" aria-hidden="true">→</div>
@@ -529,10 +529,10 @@ java -jar signing-keys.jar check keys/prod/acme</code></pre>
 <!-- 5 -->
 <section id="commands">
   <h2><span class="num">5</span>Command reference</h2>
-  <p>Below, <code>signing-keys</code> means whichever of the three ways you run it.</p>
+  <p>Below, <code>signing-keys-tool</code> means whichever of the three ways you run it.</p>
 
   <h3>generate</h3>
-  <pre><code>signing-keys generate --env &lt;environment&gt; [--client &lt;client&gt;] [--out &lt;folder&gt;]
+  <pre><code>signing-keys-tool generate --env &lt;environment&gt; [--client &lt;client&gt;] [--out &lt;folder&gt;]
                       [--name &lt;file prefix&gt;] [--bits 2048|3072|4096] [--days &lt;days&gt;] [--force]</code></pre>
   <div class="table-wrap"><table>
     <thead><tr><th>Option</th><th>Meaning</th><th>Default</th></tr></thead>
@@ -548,8 +548,8 @@ java -jar signing-keys.jar check keys/prod/acme</code></pre>
   </table></div>
 
   <h3>check</h3>
-  <pre><code>signing-keys check &lt;folder&gt; [--name &lt;file prefix&gt;]
-signing-keys check --env &lt;environment&gt; [--client &lt;client&gt;] [--out &lt;folder&gt;] [--name &lt;file prefix&gt;]</code></pre>
+  <pre><code>signing-keys-tool check &lt;folder&gt; [--name &lt;file prefix&gt;]
+signing-keys-tool check --env &lt;environment&gt; [--client &lt;client&gt;] [--out &lt;folder&gt;] [--name &lt;file prefix&gt;]</code></pre>
   <p>Give either a folder or <code>--env</code>, which finds the folder the same way <code>generate</code> would. If you use <code>--env</code> without <code>--out</code>, that means the temp folder.</p>
 
   <h3>help</h3>
@@ -583,7 +583,7 @@ signing-keys check --env &lt;environment&gt; [--client &lt;client&gt;] [--out &l
   <div class="scenario">
     <h3><span class="tag">A</span>Setting up keys for a new client</h3>
     <p>Production needs its own pair for the client <code>acme</code>:</p>
-<pre><code><span class="p">&gt; </span>java -jar signing-keys.jar generate --env prod --client acme --out keys
+<pre><code><span class="p">&gt; </span>java -jar signing-keys-tool.jar generate --env prod --client acme --out keys
 Created the signing key pair for prod / acme
   private key  C:\work\keys\prod\acme\signing-private.pem
   public key   C:\work\keys\prod\acme\signing-public.pem
@@ -602,7 +602,7 @@ public key, so 'check' can warn there before the key expires.</code></pre>
   <div class="scenario">
     <h3><span class="tag">B</span>Confirming a server has the right public key</h3>
     <p>A server that only verifies signatures holds the public key and the certificate. Run <code>check</code> there:</p>
-<pre><code><span class="p">&gt; </span>java -jar signing-keys.jar check C:\apps\verifier\keys
+<pre><code><span class="p">&gt; </span>java -jar signing-keys-tool.jar check C:\apps\verifier\keys
 Checked C:\apps\verifier\keys
   public key   RSA 2048 bits (SHA256withRSA / RS256)
   fingerprint  SHA-256 of the public key: 1aac9141ce06d3a01d8e64354337a8833c7e16c36af16b7d996c8f8cbba751b5
@@ -634,10 +634,10 @@ Checked C:\apps\verifier\keys
 
   <div class="scenario">
     <h3><span class="tag">F</span>A typo or an unsafe name</h3>
-<pre><code><span class="p">&gt; </span>java -jar signing-keys.jar generate --env ../x
+<pre><code><span class="p">&gt; </span>java -jar signing-keys-tool.jar generate --env ../x
 <span class="e">error: --env '../x' is not allowed. Use letters, digits, '.', '_' and '-' only, start with a letter or digit, and keep it to 64 characters.</span>
 
-signing-keys: creates and checks RSA key pairs for digital signatures (SHA256withRSA, the RS256 of JWTs).
+signing-keys-tool: creates and checks RSA key pairs for digital signatures (SHA256withRSA, the RS256 of JWTs).
 <span class="c">… usage text …</span></code></pre>
     <p>Exit code 2: the command line is wrong, so nothing was attempted.</p>
   </div>
@@ -698,10 +698,10 @@ signing-keys: creates and checks RSA key pairs for digital signatures (SHA256wit
   <div class="table-wrap"><table>
     <thead><tr><th>Item</th><th>Value</th></tr></thead>
     <tbody>
-      <tr><td>Maven coordinates</td><td><code>io.primelogiclab.tools:signing-keys:1.0</code> (jar)</td></tr>
-      <tr><td>Java package</td><td><code>io.primelogiclab.tools.signingkeys</code></td></tr>
-      <tr><td>Main class</td><td><code>io.primelogiclab.tools.signingkeys.SigningKeysTool</code></td></tr>
-      <tr><td>Build output</td><td><code>signing-keys.jar</code> in the project folder, not <code>target/</code>. It's git-ignored.</td></tr>
+      <tr><td>Maven coordinates</td><td><code>io.primelogiclab.tools:signing-keys-tool:1.0</code> (jar)</td></tr>
+      <tr><td>Java package</td><td><code>io.primelogiclab.tools.signingkeystool</code></td></tr>
+      <tr><td>Main class</td><td><code>io.primelogiclab.tools.signingkeystool.SigningKeysTool</code></td></tr>
+      <tr><td>Build output</td><td><code>signing-keys-tool.jar</code> in the project folder, not <code>target/</code>. It's git-ignored.</td></tr>
       <tr><td>Target bytecode</td><td>Java 8 (<code>maven.compiler.source/target 1.8</code>), so the jar also runs on servers that are still on Java 8</td></tr>
       <tr><td>Test framework</td><td>JUnit 4.13.1, test scope only (<a href="#ref-junit">JUnit 4</a>)</td></tr>
       <tr><td>License</td><td>MIT, in <code>LICENSE</code></td></tr>
@@ -711,7 +711,7 @@ signing-keys: creates and checks RSA key pairs for digital signatures (SHA256wit
   <h3>Tests</h3>
   <p><code>SigningKeysToolTest</code> runs the tool end to end. Each test calls <code>SigningKeysTool.run(...)</code> with captured output streams in a temporary folder. The expiry tests swap in a <code>Clock</code> moved forward in time, so they can test "29 days left", "31 days left" and "expired" without waiting. The 39 tests cover file layout, name validation, overwrite protection, file permissions, fingerprints, PKCS#1 detection, the expiry rules and cleanup of the temp keystore.</p>
   <div class="callout ok"><span class="t">Last verified build: 2026-10-11</span>
-    <p>JDK 21.0.2 and Maven 3.9.16 on Windows. <code>mvn clean package</code> ran 39 tests: 0 failures, 0 errors, 1 skipped. The skipped test checks file permissions that only apply on another type of file system, so it doesn't run on Windows. The jar's manifest names <code>io.primelogiclab.tools.signingkeys.SigningKeysTool</code> as its main class.</p>
+    <p>JDK 21.0.2 and Maven 3.9.16 on Windows. <code>mvn clean package</code> ran 39 tests: 0 failures, 0 errors, 1 skipped. The skipped test checks file permissions that only apply on another type of file system, so it doesn't run on Windows. The jar's manifest names <code>io.primelogiclab.tools.signingkeystool.SigningKeysTool</code> as its main class.</p>
   </div>
 
   <h3>Continuous integration</h3>
@@ -719,7 +719,7 @@ signing-keys: creates and checks RSA key pairs for digital signatures (SHA256wit
   <ul>
     <li>A matrix of <code>windows-latest</code> and <code>ubuntu-latest</code>, set up with Eclipse Temurin Java 8 through <code>actions/setup-java</code> (<a href="#ref-setupjava">setup-java</a>, <a href="#ref-temurin">Temurin</a>), with the Maven cache on.</li>
     <li><code>mvn -B -ntp package</code> builds and tests.</li>
-    <li>The Ubuntu job uploads <code>signing-keys.jar</code> and both launchers as a download kept for 30 days, so the tool can be tried without building it.</li>
+    <li>The Ubuntu job uploads <code>signing-keys-tool.jar</code> and both launchers as a download kept for 30 days, so the tool can be tried without building it.</li>
     <li>When a test fails, the job uploads <code>target/surefire-reports</code>.</li>
   </ul>
 </section>
@@ -778,15 +778,15 @@ signing-keys: creates and checks RSA key pairs for digital signatures (SHA256wit
     <li><a href="../LICENSE">LICENSE</a><span class="why">The MIT license.</span></li>
     <li><a href="../pom.xml">pom.xml</a><span class="why">Coordinates, Java 8 target, main class, JUnit version.</span></li>
     <li><a href="../.github/workflows/build.yml">.github/workflows/build.yml</a><span class="why">The CI workflow.</span></li>
-    <li><a href="../src/main/java/io/primelogiclab/tools/signingkeys/">src/main/java/io/primelogiclab/tools/signingkeys/</a><span class="why">SigningKeysTool, KeyFiles, Keytool, Pem and the two exceptions.</span></li>
-    <li><a href="../src/test/java/io/primelogiclab/tools/signingkeys/SigningKeysToolTest.java">SigningKeysToolTest.java</a><span class="why">The 39 tests.</span></li>
+    <li><a href="../src/main/java/io/primelogiclab/tools/signingkeystool/">src/main/java/io/primelogiclab/tools/signingkeystool/</a><span class="why">SigningKeysTool, KeyFiles, Keytool, Pem and the two exceptions.</span></li>
+    <li><a href="../src/test/java/io/primelogiclab/tools/signingkeystool/SigningKeysToolTest.java">SigningKeysToolTest.java</a><span class="why">The 39 tests.</span></li>
   </ul>
 </section>
 
 </main>
 
 <footer>
-  <div class="wrap">Signing Keys: project documentation · written 2026-10-11 from the source at version 1.0 · a Markdown copy of this page is <code>signing-keys.md</code> in the same folder.</div>
+  <div class="wrap">Signing Keys Tool: project documentation · written 2026-10-11 from the source at version 1.0 · a Markdown copy of this page is <code>signing-keys-tool.md</code> in the same folder.</div>
 </footer>
 
 <button class="nav-btn" type="button" id="navBtn" aria-expanded="false" aria-controls="navPanel">

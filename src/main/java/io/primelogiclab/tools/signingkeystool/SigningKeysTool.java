@@ -1,4 +1,4 @@
-package io.primelogiclab.tools.signingkeys;
+package io.primelogiclab.tools.signingkeystool;
 
 import java.io.PrintStream;
 import java.nio.file.Path;
@@ -6,7 +6,7 @@ import java.nio.file.Paths;
 import java.time.Clock;
 
 /**
- * The command line of signing-keys, which creates and checks RSA key pairs for digital signatures
+ * The command line of signing-keys-tool, which creates and checks RSA key pairs for digital signatures
  * (SHA256withRSA, the RS256 of JWTs), one pair per environment or client. It uses only the JDK, so there is
  * nothing else to install.
  *
@@ -28,15 +28,15 @@ public final class SigningKeysTool {
 
     /** The help text. help prints it, and so does every command-line error, after the message. */
     static final String USAGE =
-            "signing-keys: creates and checks RSA key pairs for digital signatures (SHA256withRSA, the RS256 of JWTs).\n"
+            "signing-keys-tool: creates and checks RSA key pairs for digital signatures (SHA256withRSA, the RS256 of JWTs).\n"
             + "\n"
             + "Usage:\n"
-            + "  signing-keys generate --env <environment> [--client <client>] [--out <folder>]\n"
-            + "                        [--name <file prefix>] [--bits 2048|3072|4096] [--days <days>] [--force]\n"
-            + "  signing-keys check <folder> [--name <file prefix>]\n"
-            + "  signing-keys check --env <environment> [--client <client>] [--out <folder>]\n"
-            + "                     [--name <file prefix>]\n"
-            + "  signing-keys help\n"
+            + "  signing-keys-tool generate --env <environment> [--client <client>] [--out <folder>]\n"
+            + "                             [--name <file prefix>] [--bits 2048|3072|4096] [--days <days>] [--force]\n"
+            + "  signing-keys-tool check <folder> [--name <file prefix>]\n"
+            + "  signing-keys-tool check --env <environment> [--client <client>] [--out <folder>]\n"
+            + "                          [--name <file prefix>]\n"
+            + "  signing-keys-tool help\n"
             + "\n"
             + "generate writes <out>/<environment>[/<client>]/<name>-private.pem, <name>-public.pem and <name>-cert.pem,\n"
             + "then reads them back and checks them. It refuses to replace files that exist unless you give --force.\n"

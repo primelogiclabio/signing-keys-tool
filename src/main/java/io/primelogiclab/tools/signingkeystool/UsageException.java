@@ -1,4 +1,4 @@
-package io.primelogiclab.tools.signingkeys;
+package io.primelogiclab.tools.signingkeystool;
 
 /**
  * The command line is wrong: an unknown command or option, a missing value, or a value that is not allowed.

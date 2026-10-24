@@ -1,4 +1,4 @@
-package io.primelogiclab.tools.signingkeys;
+package io.primelogiclab.tools.signingkeystool;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -486,7 +486,7 @@ public class SigningKeysToolTest {
     @Test
     public void helpPrintsTheUsageAndSucceeds() throws Exception {
         assertEquals(0, run("help"));
-        assertTrue(out().contains("signing-keys generate"));
+        assertTrue(out().contains("signing-keys-tool generate"));
         assertEquals("", err());
     }
 
