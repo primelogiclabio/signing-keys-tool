@@ -1,6 +1,9 @@
 # Generated keys. A private key must never be committed.
 keys/
 *.pem
+# OpenPGP keys (and detached signatures) from generate --type openpgp or gpg --export
+*.asc
+*.gpg
 
 # Build output: target/ has the versioned jar, signing-keys-tool.jar is the copy the launchers use
 target/

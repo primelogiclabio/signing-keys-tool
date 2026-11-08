@@ -1,17 +1,21 @@
 package io.primelogiclab.tools.signingkeystool;
 
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Clock;
+import java.util.Arrays;
+import java.util.Locale;
 
 /**
  * The command line of signing-keys-tool, which creates and checks RSA key pairs for digital signatures
- * (SHA256withRSA, the RS256 of JWTs), one pair per environment or client. It uses only the JDK, so there is
- * nothing else to install.
+ * (SHA256withRSA, the RS256 of JWTs), one pair per environment or client, and OpenPGP keys for signing
+ * releases (Maven Central). It uses only the JDK, so there is nothing else to install.
  *
- * The commands: generate writes a new pair ({@link KeyFiles#generate}), check reads a pair back
- * ({@link KeyFiles#check}), and help prints {@link #USAGE}.
+ * The commands: generate writes a new pair ({@link KeyFiles#generate}) or, with --type openpgp, a new OpenPGP
+ * key ({@link OpenPgpFiles#generate}), check reads one back ({@link KeyFiles#check}, {@link OpenPgpFiles#check}),
+ * and help prints {@link #USAGE}.
  *
  * Exit codes: 0 done, 1 the work failed (a file exists, a key does not load, the pair does not match, the
  * key has expired), 2 the command line is wrong.
@@ -36,6 +40,13 @@ public final class SigningKeysTool {
             + "  signing-keys-tool check <folder> [--name <file prefix>]\n"
             + "  signing-keys-tool check --env <environment> [--client <client>] [--out <folder>]\n"
             + "                          [--name <file prefix>]\n"
+            + "  signing-keys-tool generate --type openpgp --env <environment> --uid \"Name <email>\" [--client <client>]\n"
+            + "                             [--out <folder>] [--name <file prefix>] [--bits 3072|4096] [--days <days>]\n"
+            + "                             [--force]\n"
+            + "  signing-keys-tool check --type openpgp <folder> [--name <file prefix>]\n"
+            + "  signing-keys-tool check --type openpgp --env <environment> [--client <client>] [--out <folder>]\n"
+            + "                          [--name <file prefix>]\n"
+            + "  signing-keys-tool check <file>.asc\n"
             + "  signing-keys-tool help\n"
             + "\n"
             + "generate writes <out>/<environment>[/<client>]/<name>-private.pem, <name>-public.pem and <name>-cert.pem,\n"
@@ -55,7 +66,19 @@ public final class SigningKeysTool {
             + "fails when the key has expired.\n"
             + "\n"
             + "The private key is PKCS#8 (-----BEGIN PRIVATE KEY-----) with no password. The public key is X.509\n"
-            + "(-----BEGIN PUBLIC KEY-----). Exit codes: 0 done, 1 failed, 2 wrong command line.\n";
+            + "(-----BEGIN PUBLIC KEY-----).\n"
+            + "\n"
+            + "--type openpgp makes an OpenPGP key for signing releases, such as for Maven Central, instead of a PEM\n"
+            + "pair: <name>-openpgp-public.asc and <name>-openpgp-secret.asc (ASCII-armored). It is an RSA key that can\n"
+            + "certify and sign, with the user ID and the expiry in its self-signature.\n"
+            + "  --uid     the user ID, \"Name <email>\" (required)\n"
+            + "  --bits    3072 or 4096, default: 4096\n"
+            + "The secret key is protected by a passphrase, taken from the " + Passphrase.VARIABLE + " environment\n"
+            + "variable or else asked for at the console. It is never an argument and never printed. check prints the\n"
+            + "fingerprint, the user ID and the expiry, warns when 30 days or fewer are left, and decrypts the secret\n"
+            + "key when it can get the passphrase. Upload the public key with gpg; see the README.\n"
+            + "\n"
+            + "Exit codes: 0 done, 1 failed, 2 wrong command line.\n";
 
     private SigningKeysTool() { }
 
@@ -78,6 +101,11 @@ public final class SigningKeysTool {
      * to err. The clock is what "now" means when check decides whether a key has expired, so tests can move it.
      */
     static int run(String[] args, PrintStream out, PrintStream err, Clock clock) {
+        return run(args, out, err, clock, Passphrase.DEFAULT);
+    }
+
+    /** Runs one command with the given source of OpenPGP passphrases, so tests need no console or environment. */
+    static int run(String[] args, PrintStream out, PrintStream err, Clock clock, Passphrase passphrase) {
         try {
             if (args.length == 0) {
                 throw new UsageException("Give a command: generate, check or help.");
@@ -89,12 +117,24 @@ public final class SigningKeysTool {
                 case "-h":
                     out.print(USAGE);
                     return 0;
-                case "generate":
-                    generate(options(args), out, err, clock);
+                case "generate": {
+                    Options o = options(args);
+                    if (isOpenPgp(o)) {
+                        generateOpenPgp(o, out, err, clock, passphrase);
+                    } else {
+                        generate(o, out, err, clock);
+                    }
                     return 0;
-                case "check":
-                    check(options(args), out, err, clock);
+                }
+                case "check": {
+                    Options o = options(args);
+                    if (isOpenPgp(o)) {
+                        checkOpenPgp(o, out, err, clock, passphrase);
+                    } else {
+                        check(o, out, err, clock);
+                    }
                     return 0;
+                }
                 default:
                     throw new UsageException("Unknown command '" + command + "'.");
             }
@@ -119,6 +159,9 @@ public final class SigningKeysTool {
         if (o.folder != null) {
             throw new UsageException("generate does not take a folder. Use --out, --env and --client.");
         }
+        if (o.uid != null) {
+            throw new UsageException("--uid is for --type openpgp only.");
+        }
         String name = o.name == null ? KeyFiles.DEFAULT_NAME : o.name;
         KeyFiles.requireSafeName("--name", name);
         Path folder = keyFolder(o);
@@ -134,17 +177,7 @@ public final class SigningKeysTool {
             }
         }
 
-        int days = KeyFiles.DEFAULT_DAYS;
-        if (o.days != null) {
-            try {
-                days = Integer.parseInt(o.days);
-            } catch (NumberFormatException e) {
-                throw new UsageException("--days '" + o.days + "' is not a number. Use 1 to " + KeyFiles.MAX_DAYS + ".");
-            }
-            if (!KeyFiles.isAllowedDays(days)) {
-                throw new UsageException("--days " + days + " is not allowed. Use 1 to " + KeyFiles.MAX_DAYS + ".");
-            }
-        }
+        int days = days(o);
 
         KeyFiles files = new KeyFiles(folder, name, err, clock);
         String subject = name + " " + o.env + (o.client == null ? "" : " " + o.client);
@@ -171,20 +204,10 @@ public final class SigningKeysTool {
      */
     private static void check(Options o, PrintStream out, PrintStream err, Clock clock)
             throws UsageException, FailException {
-        if (o.bits != null || o.days != null || o.force) {
-            throw new UsageException("--bits, --days and --force are for generate only.");
-        }
+        requireNoGenerateOptions(o);
         String name = o.name == null ? KeyFiles.DEFAULT_NAME : o.name;
         KeyFiles.requireSafeName("--name", name);
-        Path folder;
-        if (o.folder != null) {
-            if (o.env != null || o.client != null || o.out != null) {
-                throw new UsageException("Give either a folder or --env (with --client and --out), not both.");
-            }
-            folder = Paths.get(o.folder).toAbsolutePath().normalize();
-        } else {
-            folder = keyFolder(o);
-        }
+        Path folder = checkFolder(o);
 
         KeyFiles files = new KeyFiles(folder, name, err, clock);
         KeyFiles.Report report = files.check();
@@ -200,6 +223,165 @@ public final class SigningKeysTool {
             err.println("warning: the key expires on " + KeyFiles.date(report.notAfter) + ", in " + report.daysLeft
                     + (report.daysLeft == 1 ? " day" : " days") + ". Plan a new pair.");
         }
+    }
+
+    /** --days, checked: 1 to {@link KeyFiles#MAX_DAYS}, default {@link KeyFiles#DEFAULT_DAYS}. */
+    private static int days(Options o) throws UsageException {
+        if (o.days == null) {
+            return KeyFiles.DEFAULT_DAYS;
+        }
+        int days;
+        try {
+            days = Integer.parseInt(o.days);
+        } catch (NumberFormatException e) {
+            throw new UsageException("--days '" + o.days + "' is not a number. Use 1 to " + KeyFiles.MAX_DAYS + ".");
+        }
+        if (!KeyFiles.isAllowedDays(days)) {
+            throw new UsageException("--days " + days + " is not allowed. Use 1 to " + KeyFiles.MAX_DAYS + ".");
+        }
+        return days;
+    }
+
+    /** check refuses the options that only make sense when a key is made. */
+    private static void requireNoGenerateOptions(Options o) throws UsageException {
+        if (o.bits != null || o.days != null || o.force || o.uid != null) {
+            throw new UsageException("--bits, --days, --uid and --force are for generate only.");
+        }
+    }
+
+    /** The folder (or, for OpenPGP, the file) check reads: the one given, or the one --env, --client and --out name. */
+    private static Path checkFolder(Options o) throws UsageException {
+        if (o.folder != null) {
+            if (o.env != null || o.client != null || o.out != null) {
+                throw new UsageException("Give either a folder or --env (with --client and --out), not both.");
+            }
+            return Paths.get(o.folder).toAbsolutePath().normalize();
+        }
+        return keyFolder(o);
+    }
+
+    /**
+     * True for --type openpgp, and for check on a single .asc file with no --type. False for --type rsa or no
+     * --type: the PEM pair this tool has always made.
+     */
+    private static boolean isOpenPgp(Options o) throws UsageException {
+        if (o.type == null) {
+            return o.folder != null && o.folder.toLowerCase(Locale.ROOT).endsWith(".asc");
+        }
+        switch (o.type) {
+            case "rsa":
+                return false;
+            case "openpgp":
+                return true;
+            default:
+                throw new UsageException("--type '" + o.type + "' is not known. Use rsa (the default) or openpgp.");
+        }
+    }
+
+    /**
+     * generate --type openpgp. Checks every option, gets the passphrase (environment or console, never an
+     * argument), then makes the key with {@link OpenPgpFiles#generate}, which reads it back with the same
+     * passphrase. The passphrase is cleared from memory afterwards and is never printed.
+     */
+    private static void generateOpenPgp(Options o, PrintStream out, PrintStream err, Clock clock,
+            Passphrase passphrase) throws UsageException, FailException {
+        if (o.folder != null) {
+            throw new UsageException("generate does not take a folder. Use --out, --env and --client.");
+        }
+        if (o.uid == null) {
+            throw new UsageException("--uid is required with --type openpgp. Give it as \"Name <email>\".");
+        }
+        OpenPgpFiles.requireUserId(o.uid);
+        String name = o.name == null ? KeyFiles.DEFAULT_NAME : o.name;
+        KeyFiles.requireSafeName("--name", name);
+        Path folder = keyFolder(o);
+        int bits = OpenPgpFiles.DEFAULT_BITS;
+        if (o.bits != null) {
+            try {
+                bits = Integer.parseInt(o.bits);
+            } catch (NumberFormatException e) {
+                throw new UsageException("--bits '" + o.bits + "' is not a number. Use 3072 or 4096.");
+            }
+            if (!OpenPgpFiles.isAllowedBits(bits)) {
+                throw new UsageException("--bits " + bits + " is not allowed for OpenPGP. Use 3072 or 4096.");
+            }
+        }
+        int days = days(o);
+
+        OpenPgpFiles files = new OpenPgpFiles(folder, name, err, clock);
+        files.requireNoFiles(o.force);
+        char[] secret = passphrase.get(true);
+        if (secret == null || secret.length == 0) {
+            throw new FailException("No passphrase for the secret key. Set the " + Passphrase.VARIABLE
+                    + " environment variable, or run this in a console to type it.");
+        }
+        OpenPgpFiles.Report report;
+        try {
+            report = files.generate(bits, days, o.uid, secret, o.force);
+        } finally {
+            Arrays.fill(secret, '\0');
+        }
+
+        out.println("Created the " + name + " OpenPGP key for " + o.env + (o.client == null ? "" : " / " + o.client));
+        out.println("  public key   " + files.publicFile());
+        out.println("  secret key   " + files.secretFile() + " (protected by the passphrase)");
+        printOpenPgp(report, out, err);
+        out.println();
+        out.println("Import it into GnuPG (gpg --import), then send the public key to a keyserver:");
+        out.println("  gpg --keyserver keyserver.ubuntu.com --send-keys " + report.fingerprint);
+        out.println("Keep the secret key and its passphrase out of source control.");
+    }
+
+    /** check --type openpgp on a folder, or check on a single .asc file. */
+    private static void checkOpenPgp(Options o, PrintStream out, PrintStream err, Clock clock, Passphrase passphrase)
+            throws UsageException, FailException {
+        requireNoGenerateOptions(o);
+        String name = o.name == null ? KeyFiles.DEFAULT_NAME : o.name;
+        KeyFiles.requireSafeName("--name", name);
+        Path given = checkFolder(o);
+        OpenPgpFiles.Report report;
+        if (o.folder != null && Files.isRegularFile(given)) {
+            if (o.name != null) {
+                throw new UsageException("--name is for a folder, not a single file.");
+            }
+            report = new OpenPgpFiles(given.getParent(), name, err, clock).checkFile(given, passphrase);
+        } else {
+            report = new OpenPgpFiles(given, name, err, clock).check(passphrase);
+        }
+        out.println("Checked " + given);
+        printOpenPgp(report, out, err);
+    }
+
+    /** The lines generate and check both print for an OpenPGP key, and the expiry warning on err. */
+    private static void printOpenPgp(OpenPgpFiles.Report report, PrintStream out, PrintStream err) {
+        out.println("  key          RSA " + report.bits + " bits, OpenPGP v4");
+        for (String uid : report.userIds) {
+            out.println("  user ID      " + uid);
+        }
+        out.println("  fingerprint  " + report.fingerprint);
+        out.println("  key ID       " + report.keyId);
+        out.println("  created      " + KeyFiles.date(report.created));
+        out.println("  expires      " + (report.expires == null ? "never"
+                : KeyFiles.date(report.expires) + " (" + days(report.daysLeft) + " left)"));
+        switch (report.secret) {
+            case PAIR_OK:
+                out.println("  check        pair OK (the secret key decrypts with the passphrase and signs)");
+                break;
+            case NOT_DECRYPTED:
+                out.println("  check        the secret key is for this key, but was not decrypted. Set "
+                        + Passphrase.VARIABLE + " or run in a console to check the passphrase too.");
+                break;
+            default:
+                out.println("  check        public key only, no secret key checked");
+        }
+        if (report.expiresSoon()) {
+            err.println("warning: the key expires on " + KeyFiles.date(report.expires) + ", in "
+                    + days(report.daysLeft) + ". Extend it (gpg --quick-set-expire) or plan a new key.");
+        }
+    }
+
+    private static String days(long days) {
+        return days + (days == 1 ? " day" : " days");
     }
 
     /** The expiry line: the date and the days left, or "unknown" when the folder has no certificate. */
@@ -240,6 +422,10 @@ public final class SigningKeysTool {
         String bits;
         String days;
         boolean force;
+        /** rsa (the default) or openpgp. */
+        String type;
+        /** The OpenPGP user ID, "Name <email>". */
+        String uid;
         /** The one argument that is not an option: the folder for check. */
         String folder;
     }
@@ -270,6 +456,12 @@ public final class SigningKeysTool {
                     break;
                 case "--force":
                     o.force = true;
+                    break;
+                case "--type":
+                    o.type = value(args, ++i, arg);
+                    break;
+                case "--uid":
+                    o.uid = value(args, ++i, arg);
                     break;
                 default:
                     if (arg.startsWith("--")) {

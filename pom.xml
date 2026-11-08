@@ -10,7 +10,7 @@
     <version>1.0</version>
     <packaging>jar</packaging>
     <name>Signing Keys Tool</name>
-    <description>Creates and checks RSA key pairs (PEM files) for digital signatures with SHA256withRSA (RS256 in JWTs), one pair per environment or client.</description>
+    <description>Creates and checks RSA key pairs (PEM files) for digital signatures with SHA256withRSA (RS256 in JWTs), one pair per environment or client, and OpenPGP keys for signing Maven Central releases.</description>
 
     <licenses>
         <license>

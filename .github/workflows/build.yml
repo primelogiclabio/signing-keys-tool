@@ -46,8 +46,25 @@ jobs:
           java-version: '8' # the oldest Java the tool supports
           cache: maven
 
+      # Git for Windows brings GnuPG in its usr\bin, which is not always on the PATH.
+      - name: Put GnuPG on the PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command gpg -ErrorAction SilentlyContinue)) {
+            "$env:ProgramFiles\Git\usr\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+          }
+
+      - name: Show the GnuPG version
+        run: gpg --version
+
+      # The OpenPGP tests import the generated key into GnuPG and sign and verify with it. gpg is
+      # on both runners (Git for Windows brings it on Windows); this makes those tests fail rather
+      # than skip if it ever goes missing.
       - name: Build and test
         run: mvn -B -ntp package
+        env:
+          SIGNING_KEYS_REQUIRE_GPG: 'true'
 
       # The jar is the same on both systems, so one run keeps it.
       - name: Keep the jars and the launchers
