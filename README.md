@@ -5,6 +5,10 @@ or per client. Use the pairs wherever one app signs and others verify with SHA25
 RS256), webhook payloads, license files and the like. It is one Java program with no dependencies. It needs a JDK to
 run, and it does not need OpenSSL.
 
+It also makes **OpenPGP keys** (`--type openpgp`), the kind Maven Central requires: every file of a release is signed
+with one, and Central checks the signatures against the public key on a keyserver. See
+[OpenPGP keys for Maven Central](#openpgp-keys-for-maven-central).
+
 ## What it does
 
 - **`generate`** writes a private key and a public key as PEM files, in a folder for the environment (and the client,
@@ -14,6 +18,8 @@ run, and it does not need OpenSSL.
 - **`check`** reads a pair back, signs a test string with the private key and checks the signature with the public
   key. It prints the **fingerprint** of the public key, so you can confirm that two places hold the same one. It also
   prints the **expiry**, warns when 30 days or fewer are left, and fails once the key has expired.
+- **`generate --type openpgp`** and **`check --type openpgp`** do the same for an OpenPGP key that signs Maven Central
+  releases: a public and a passphrase-protected secret `.asc` file, which GnuPG imports as they are.
 
 ### Why not just use keytool or OpenSSL?
 
@@ -141,7 +147,78 @@ a new pair to get an expiry.
 A private key in the older PKCS#1 form (`-----BEGIN RSA PRIVATE KEY-----`) does not load. `check` says so and prints
 the OpenSSL command that converts it.
 
-Never commit a private key. `keys/` and `*.pem` are in this repository's `.gitignore`.
+Never commit a private key. `keys/`, `*.pem` and `*.asc` are in this repository's `.gitignore`.
+
+### OpenPGP keys for Maven Central
+
+Maven Central does not take the PEM pair. It wants a detached OpenPGP signature (`<file>.asc`) next to every file of a
+release, and it checks them against a public key that it finds on a public keyserver. `--type openpgp` makes that
+key.
+
+```
+signing-keys-tool generate --type openpgp --env <environment> --uid "Name <email>" [--client <client>]
+                           [--out <folder>] [--name <file prefix>] [--bits 3072|4096] [--days <days>] [--force]
+```
+
+For example:
+
+```
+signing-keys-tool generate --type openpgp --env release --out keys --uid "Example Releases <releases@example.com>"
+```
+
+It writes two ASCII-armored files in `<out>/<env>[/<client>]`:
+
+| File | What it is | Who should hold it |
+|---|---|---|
+| `<name>-openpgp-public.asc` | The public key (`-----BEGIN PGP PUBLIC KEY BLOCK-----`) | The keyserver, and anyone who verifies |
+| `<name>-openpgp-secret.asc` | The secret key, encrypted with your passphrase (`-----BEGIN PGP PRIVATE KEY BLOCK-----`) | Whoever runs the release, such as your CI |
+
+The key is an RSA OpenPGP v4 key, 4096 bits unless `--bits 3072`, that can certify and sign. The user ID and the
+expiry (`--days`, 5 years by default) are in its self-signature, so there is no certificate file. The secret key is
+protected the way GnuPG protects its own exports (S2K usage 254, iterated and salted SHA-256, AES-256). The secret
+file is limited to its owner, `--force` is needed to replace either file, and the key is read back and decrypted
+before `generate` reports it.
+
+**The passphrase** is never a command-line argument. The tool takes it from the `SIGNING_KEYS_PASSPHRASE` environment
+variable or, when that is not set, asks for it twice at the console without echoing it. It never prints it. Keep it
+somewhere safe, apart from the secret key: without it the key cannot sign.
+
+**Check** the key, or any RSA `.asc` key, including one exported from GnuPG:
+
+```
+signing-keys-tool check --type openpgp keys/release
+signing-keys-tool check keys/release/signing-openpgp-public.asc
+```
+
+It prints the v4 **fingerprint** (40 hex digits, the ones `gpg --fingerprint` shows in groups), the key ID, the user ID and
+the **expiry**, warns when 30 days or fewer are left and fails once the key has expired or been revoked. When the
+secret key is there and the passphrase is available (the variable, or a console), it decrypts the secret key and
+signs a test string with it; otherwise it only checks that the secret key is for the same key.
+
+**Upload the public key.** The tool does not talk to keyservers. Use GnuPG:
+
+```
+gpg --import keys/release/signing-openpgp-public.asc
+gpg --keyserver keyserver.ubuntu.com --send-keys <fingerprint>
+```
+
+`generate` and `check` print the fingerprint and the exact `--send-keys` line. Central also looks on
+`keys.openpgp.org`; you can upload `signing-openpgp-public.asc` at <https://keys.openpgp.org/upload>, and that server
+publishes the user ID only after you confirm the email it sends. It can take a few minutes before a keyserver answers
+for a new key. Check with `gpg --keyserver keyserver.ubuntu.com --recv-keys <fingerprint>`.
+
+**Sign releases.** Import the secret key where the release runs, and let the `maven-gpg-plugin` do the signing:
+
+```
+gpg --batch --import keys/release/signing-openpgp-secret.asc
+```
+
+GnuPG keeps the passphrase protection on import, and asks for the passphrase when it signs. In CI, keep the secret
+file and the passphrase in the CI's secrets, and pass the passphrase to the plugin through its
+`MAVEN_GPG_PASSPHRASE` environment variable.
+
+**Renew** before it expires: `gpg --quick-set-expire <fingerprint> 2y`, then send the key to the keyserver again.
+Signatures Central already accepted stay valid.
 
 ### Exit codes
 

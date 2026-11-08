@@ -334,14 +334,21 @@ final class KeyFiles {
         Files.write(file, pem.getBytes(StandardCharsets.US_ASCII));
     }
 
-    /** Creates the private key file, limits it to its owner, then writes the key, so it is never readable by others. */
+    /** Writes the private key file so it is never readable by others. See {@link #writeOwnerOnly}. */
     private void writePrivate(String pem) throws IOException {
-        Path file = privateFile();
+        writeOwnerOnly(privateFile(), pem, err);
+    }
+
+    /**
+     * Creates a file, limits it to its owner, then writes the text, so a secret is never readable by others, not
+     * even for a moment. Problems limiting the file are warnings on err.
+     */
+    static void writeOwnerOnly(Path file, String text, PrintStream err) throws IOException {
         if (!Files.exists(file)) {
             Files.createFile(file);
         }
-        restrictToOwner(file);
-        Files.write(file, pem.getBytes(StandardCharsets.US_ASCII),
+        restrictToOwner(file, err);
+        Files.write(file, text.getBytes(StandardCharsets.US_ASCII),
                 StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
@@ -350,7 +357,7 @@ final class KeyFiles {
      * entry, for the owner. When neither is possible it warns instead of failing, because the pair itself is
      * fine and the user can protect the file another way.
      */
-    private void restrictToOwner(Path file) {
+    private static void restrictToOwner(Path file, PrintStream err) {
         try {
             PosixFileAttributeView posix = Files.getFileAttributeView(file, PosixFileAttributeView.class);
             if (posix != null) {
